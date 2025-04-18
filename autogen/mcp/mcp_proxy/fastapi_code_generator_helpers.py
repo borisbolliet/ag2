@@ -6,15 +6,22 @@ from contextlib import contextmanager
 from functools import cached_property
 from typing import Optional, Union
 
-from fastapi_code_generator.parser import (
-    Argument,
-    OpenAPIParser,
-    ParameterObject,
-    ReferenceObject,
-)
+from ...import_utils import optional_import_block
+
+with optional_import_block() as result:
+    from fastapi_code_generator.parser import (
+        Argument,
+        OpenAPIParser,
+        ParameterObject,
+        ReferenceObject,
+    )
+
+SUCCESFUL_IMPORT = result.is_successful
+
+__all__ = ["SUCCESFUL_IMPORT", "patch_get_parameter_type"]
 
 
-class ArgumentWithDescription(Argument):  # type: ignore[misc]
+class ArgumentWithDescription("Argument"):  # type: ignore[misc]
     description: Optional[str] = None
 
     @cached_property

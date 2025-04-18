@@ -7,8 +7,12 @@ import logging
 from pathlib import Path
 from typing import Dict, List
 
-from fastapi_code_generator.parser import OpenAPIParser, Operation
-from fastapi_code_generator.visitor import Visitor
+from autogen.import_utils import optional_import_block
+
+with optional_import_block() as result:
+    from fastapi_code_generator.parser import OpenAPIParser, Operation
+    from fastapi_code_generator.visitor import Visitor
+
 from pydantic import BaseModel
 
 from autogen.agentchat.conversable_agent import ConversableAgent
@@ -58,7 +62,7 @@ def chunk_list(items: List, size: int) -> List[List]:
     return [items[i : i + size] for i in range(0, len(items), size)]
 
 
-def discover_groups(operations: List[Operation], chunk_size: int = 30) -> Dict[str, str]:
+def discover_groups(operations: List["Operation"], chunk_size: int = 30) -> Dict[str, str]:
     llm_config = LLMConfig.get_current_llm_config().copy()
 
     for config in llm_config.config_list:
@@ -99,7 +103,7 @@ def discover_groups(operations: List[Operation], chunk_size: int = 30) -> Dict[s
     return refined_groups
 
 
-def assign_operation_to_group(operation: Operation, groups: dict[str, str]) -> str:
+def assign_operation_to_group(operation: "Operation", groups: dict[str, str]) -> str:
     llm_config = LLMConfig.get_current_llm_config().copy()
 
     for config in llm_config.config_list:
@@ -132,7 +136,7 @@ def refine_group_names(groups: Dict[str, str]) -> Dict[str, str]:
     return groups
 
 
-def custom_visitor(parser: OpenAPIParser, model_path: Path) -> Dict[str, object]:
+def custom_visitor(parser: "OpenAPIParser", model_path: Path) -> Dict[str, object]:
     operations = sorted(parser.operations.values(), key=lambda op: op.path)
 
     # ---- PASS 1: DISCOVER GROUPS ----
@@ -151,4 +155,4 @@ def custom_visitor(parser: OpenAPIParser, model_path: Path) -> Dict[str, object]
     return {"operations": operations}
 
 
-visit: Visitor = custom_visitor
+visit: "Visitor" = custom_visitor
