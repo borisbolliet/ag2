@@ -6,8 +6,11 @@ import logging
 from pathlib import Path
 from typing import Dict, List
 
-from fastapi_code_generator.parser import OpenAPIParser, Operation
-from fastapi_code_generator.visitor import Visitor
+from autogen.import_utils import optional_import_block
+
+with optional_import_block() as result:
+    from fastapi_code_generator.parser import OpenAPIParser, Operation
+    from fastapi_code_generator.visitor import Visitor
 
 from autogen.agentchat.conversable_agent import ConversableAgent
 
@@ -41,7 +44,7 @@ def validate_function_name(name: str, taken_names: List[str]) -> str:
     return "exit"
 
 
-def get_new_function_name(operation: Operation, taken_names: List[str]) -> str:
+def get_new_function_name(operation: "Operation", taken_names: List[str]) -> str:
     """
     Ask an AI agent to generate a new function name for a given OpenAPI operation.
 
@@ -52,8 +55,6 @@ def get_new_function_name(operation: Operation, taken_names: List[str]) -> str:
     Returns:
         A new, validated function name.
     """
-    logger.warning(f"Renaming operation '{operation.function_name}' to a new name.")
-
     agent = ConversableAgent(
         name="helpful_agent",
         system_message=SYSTEM_MESSAGE,
@@ -87,7 +88,7 @@ def get_new_function_name(operation: Operation, taken_names: List[str]) -> str:
     return response.summary
 
 
-def custom_visitor(parser: OpenAPIParser, model_path: Path) -> Dict[str, object]:
+def custom_visitor(parser: "OpenAPIParser", model_path: Path) -> Dict[str, object]:
     """
     Visits and optionally renames operations in the OpenAPI parser.
 
@@ -110,4 +111,4 @@ def custom_visitor(parser: OpenAPIParser, model_path: Path) -> Dict[str, object]
     return {"operations": operations}
 
 
-visit: Visitor = custom_visitor
+visit: "Visitor" = custom_visitor

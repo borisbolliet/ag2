@@ -6,33 +6,39 @@ from contextlib import contextmanager
 from functools import cached_property
 from typing import Optional, Union
 
-from fastapi_code_generator.parser import (
-    Argument,
-    OpenAPIParser,
-    ParameterObject,
-    ReferenceObject,
-)
+from ...import_utils import optional_import_block
 
+with optional_import_block() as result:
+    from fastapi_code_generator.parser import (
+        Argument,
+        OpenAPIParser,
+        ParameterObject,
+        ReferenceObject,
+    )
 
-class ArgumentWithDescription(Argument):  # type: ignore[misc]
-    description: Optional[str] = None
+SUCCESFUL_IMPORT = result.is_successful
 
-    @cached_property
-    def argument(self) -> str:
-        if self.description:
-            description = self.description.replace('"""', '"""')
-            type_hint = f'Annotated[{self.type_hint}, """{description}"""]'
-        else:
-            type_hint = self.type_hint
-
-        if self.default is None and self.required:
-            return f"{self.name}: {type_hint}"
-
-        return f"{self.name}: {type_hint} = {self.default}"
+__all__ = ["SUCCESFUL_IMPORT", "patch_get_parameter_type"]
 
 
 @contextmanager
 def patch_get_parameter_type() -> Iterator[None]:
+    class ArgumentWithDescription(Argument):  # type: ignore[misc]
+        description: Optional[str] = None
+
+        @cached_property
+        def argument(self) -> str:
+            if self.description:
+                description = self.description.replace('"""', '"""')
+                type_hint = f'Annotated[{self.type_hint}, """{description}"""]'
+            else:
+                type_hint = self.type_hint
+
+            if self.default is None and self.required:
+                return f"{self.name}: {type_hint}"
+
+            return f"{self.name}: {type_hint} = {self.default}"
+
     original_get_parameter_type = OpenAPIParser.get_parameter_type
 
     def get_parameter_type(

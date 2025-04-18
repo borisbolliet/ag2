@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 from pathlib import Path
 
-from fastapi_code_generator.parser import OpenAPIParser
-from fastapi_code_generator.visitor import Visitor
-
+from autogen.import_utils import optional_import_block
 from autogen.mcp.mcp_proxy.security import BaseSecurity
 
+with optional_import_block() as result:
+    from fastapi_code_generator.parser import OpenAPIParser
+    from fastapi_code_generator.visitor import Visitor
 
-def custom_visitor(parser: OpenAPIParser, model_path: Path) -> dict[str, object]:
+
+def custom_visitor(parser: "OpenAPIParser", model_path: Path) -> dict[str, object]:
     if "securitySchemes" not in parser.raw_obj["components"]:
         return {}
     security_schemes = parser.raw_obj["components"]["securitySchemes"]
@@ -32,4 +34,4 @@ def custom_visitor(parser: OpenAPIParser, model_path: Path) -> dict[str, object]
     }
 
 
-visit: Visitor = custom_visitor
+visit: "Visitor" = custom_visitor

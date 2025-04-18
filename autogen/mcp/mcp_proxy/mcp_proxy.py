@@ -23,16 +23,22 @@ from typing import (
     Union,
 )
 
-import fastapi
 import requests
 import yaml
-from datamodel_code_generator import DataModelType
-from fastapi_code_generator.__main__ import generate_code
-from mcp.server.fastmcp import FastMCP
 from pydantic import PydanticInvalidForJsonSchema
 from pydantic_core import PydanticUndefined
 
+from autogen.import_utils import optional_import_block
+
 from .security import BaseSecurity, BaseSecurityParameters
+
+with optional_import_block() as result:
+    import fastapi
+    from datamodel_code_generator import DataModelType
+    from fastapi_code_generator.__main__ import generate_code
+    from jinja2 import Environment, FileSystemLoader
+    from mcp.server.fastmcp import FastMCP
+
 
 if TYPE_CHECKING:
     from autogen.agentchat import ConversableAgent
@@ -78,8 +84,9 @@ class MCPProxy:
 
         self._security: dict[str, list[BaseSecurity]] = {}
         self._security_params: dict[Optional[str], BaseSecurityParameters] = {}
+        self._tags: set[str] = set()
 
-        self._mcp = FastMCP(title=self._title)
+        self._function_group: dict[str, list[str]] = {}
 
     @staticmethod
     def _convert_camel_case_within_braces_to_snake(text: str) -> str:
@@ -109,6 +116,18 @@ class MCPProxy:
         q_params = set(params_names) - path_params - {body} - {"security"}
 
         return q_params, path_params, body, security
+
+    @property
+    def mcp(self) -> "FastMCP":
+        mcp = FastMCP(title=self._title)
+
+        for func in self._registered_funcs:
+            try:
+                mcp.tool()(func)  # type: ignore [no-untyped-call]
+            except PydanticInvalidForJsonSchema as e:
+                logger.warning("Could not register function %s: %s", func.__name__, e)
+
+        return mcp
 
     def _process_params(
         self, path: str, func: Callable[[Any], Any], **kwargs: Any
@@ -192,6 +211,11 @@ class MCPProxy:
         def decorator(func: Callable[..., Any]) -> Callable[..., dict[str, Any]]:
             name = func.__name__
 
+            for tag in kwargs.get("tags", []):
+                if tag not in self._function_group:
+                    self._function_group[tag] = []
+                self._function_group[tag].append(name)
+
             if security is not None:
                 self._security[name] = security
 
@@ -209,11 +233,6 @@ class MCPProxy:
 
                 response = getattr(requests, method)(url, params=params, **body_dict)
                 return response.json()  # type: ignore [no-any-return]
-
-            try:
-                wrapper = self._mcp.tool()(wrapper)  # type: ignore [no-untyped-call]
-            except PydanticInvalidForJsonSchema as e:
-                logger.warning("Could not register function %s: %s", func.__name__, e)
 
             wrapper._description = (  # type: ignore [attr-defined]
                 description or func.__doc__.strip() if func.__doc__ is not None else None
@@ -268,18 +287,14 @@ class MCPProxy:
             input_text=input_text,
             encoding="utf-8",
             output_dir=output_dir,
-            template_dir=cls._get_template_dir(),
+            template_dir=cls._get_template_dir() / "client_template",
             disable_timestamp=disable_timestamp,
             custom_visitors=custom_visitors,
             output_model_type=DataModelType.PydanticV2BaseModel,
         )
-        # Use unique file name for main.py
-        # main_name = "main"
-        # main_path = output_dir / f"{main_name}.py"
-        # shutil.move(output_dir / "main.py", main_path)
+
         main_path = output_dir / "main.py"
 
-        # Change "from models import" to "from models_unique_name import"
         with main_path.open("r") as f:
             main_py_code = f.read()
         # main_py_code = main_py_code.replace("from .models import", "from models import")
@@ -290,12 +305,6 @@ class MCPProxy:
         with main_path.open("w") as f:
             f.write(main_py_code)
 
-        # Use unique file name for models.py
-        # models_name = "models"
-        # models_path = output_dir / f"{models_name}.py"
-        # shutil.move(output_dir / "models.py", models_path)
-
-        # return main_name
         return main_path.stem
 
     def set_globals(self, main: ModuleType, suffix: str) -> None:
@@ -313,6 +322,7 @@ class MCPProxy:
         client_source_path: Optional[str] = None,
         servers: Optional[list[dict[str, Any]]] = None,
         rename_functions: bool = False,
+        group_functions: bool = False,
     ) -> "MCPProxy":
         if (openapi_json is None) == (openapi_url is None):
             raise ValueError("Either openapi_json or openapi_url should be provided")
@@ -332,10 +342,18 @@ class MCPProxy:
         with optional_temp_path(client_source_path) as td:
             suffix = td.name  # noqa F841
 
+            custom_visitors = []
+
+            if rename_functions:
+                custom_visitors.append(Path(__file__).parent / "operation_renaming.py")
+
+            if group_functions:
+                custom_visitors.append(Path(__file__).parent / "operation_grouping.py")
+
             main_name = cls.generate_code(  # noqa F841
                 input_text=yaml_friendly,  # type: ignore [arg-type]
                 output_dir=td,
-                custom_visitors=[Path(__file__).parent / "operation_renaming.py"] if rename_functions else None,
+                custom_visitors=custom_visitors,
             )
             # add td to sys.path
             try:
@@ -347,7 +365,87 @@ class MCPProxy:
             client: MCPProxy = main.app  # type: ignore [attr-defined]
             client.set_globals(main, suffix=suffix)
 
+            client.dump_configurations(output_dir=td)
+
             return client
+
+    def _get_authentications(self) -> list[dict[str, Any]]:
+        seen = set()
+        authentications = []
+
+        for security_list in self._security.values():
+            for security in security_list:
+                params = security.Parameters().dump()
+
+                if params.get("type") == "unsupported":
+                    continue
+
+                dumped = json.dumps(params)  # hashable
+                if dumped not in seen:
+                    seen.add(dumped)
+                    authentications.append(security.Parameters().dump())
+        return authentications
+
+    def dump_configurations(self, output_dir: Path) -> None:
+        for tag in self._function_group:
+            output_file = output_dir / "mcp_config_{}.json".format(tag)
+
+            functions = [
+                registered_function
+                for registered_function in self._registered_funcs
+                if registered_function.__name__ in self._function_group[tag]
+            ]
+
+            self.dump_configuration(output_file, functions)
+
+        self.dump_configuration(output_dir / "mcp_config.json", self._registered_funcs)
+
+    def dump_configuration(self, output_file: Path, functions: list[Callable[..., Any]] = None) -> None:
+        # Define paths
+        template_dir = MCPProxy._get_template_dir() / "config_template"
+        template_file = "config.jinja2"
+
+        # Load Jinja environment
+        env = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True, lstrip_blocks=True)
+
+        # Load the template
+        template = env.get_template(template_file)
+        # Prepare context for rendering
+        context = {
+            "server_url": self._servers[0]["url"],  # single or list depending on your structure
+            "authentications": self._get_authentications(),  # list of auth blocks, we will also need to check _security_params
+            "operations": [
+                {"name": op.__name__, "description": op._description.replace("\n", " ").replace("\r", "").strip()}
+                for op in functions
+            ],
+        }
+
+        # Render the template
+        rendered_config = template.render(context)
+
+        # Save the output to a file
+        with open(output_file, "w") as f:
+            f.write(rendered_config)
+
+    def load_configuration(self, config_file: str) -> None:
+        with Path(config_file).open("r") as f:
+            config_data_str = f.read()
+
+        self.load_configuration_from_string(config_data_str)
+
+    def load_configuration_from_string(self, config_data_str: str) -> None:
+        config_data = json.loads(config_data_str)
+        # Load server URL
+        self._servers = [{"url": config_data["server"]["url"]}]
+
+        # Load authentication
+        for auth in config_data.get("authentication", []):
+            security = BaseSecurity.parse_security_parameters(auth)
+            self.set_security_params(security)
+
+        operation_names = [op["name"] for op in config_data.get("operations", [])]
+
+        self._registered_funcs = [func for func in self._registered_funcs if func.__name__ in operation_names]
 
     def _get_functions_to_register(
         self,
