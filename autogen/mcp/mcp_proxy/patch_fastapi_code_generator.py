@@ -6,7 +6,6 @@ import re
 from functools import cached_property, wraps
 from typing import Any
 
-import stringcase
 import yaml
 from fastapi_code_generator import __main__ as fastapi_code_generator_main
 from fastapi_code_generator.parser import OpenAPIParser, Operation
@@ -28,6 +27,13 @@ def patch_parse_schema() -> None:
     logger.info("Patched OpenAPIParser.parse_schema")
 
 
+def snakecase(string: str) -> str:
+    string = re.sub(r"[\-\.\s]", "_", str(string))
+    if not string:
+        return string
+    return string[0].lower() + re.sub(r"[A-Z]", lambda matched: "_" + (matched.group(0)), string[1:]).lower()
+
+
 def patch_function_name_parsing() -> None:
     def function_name(self: Operation) -> str:
         if self.operationId:
@@ -35,7 +41,8 @@ def patch_function_name_parsing() -> None:
         else:
             path = re.sub(r"[/{=]", "_", self.snake_case_path).replace("}", "")
             name = f"{self.type}{path}"
-        return stringcase.snakecase(name)  # type: ignore[no-any-return]
+
+        return snakecase(name)  # type: ignore[no-any-return]
 
     Operation.function_name = cached_property(function_name)
     Operation.function_name.__set_name__(Operation, "function_name")

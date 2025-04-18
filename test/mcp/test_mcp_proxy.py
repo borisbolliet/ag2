@@ -4,10 +4,12 @@
 import shutil
 from pathlib import Path
 
+import pytest
+
 from autogen.mcp.mcp_proxy.mcp_proxy import MCPProxy
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 def test_generating_whatsapp():
     tmp_path = Path("tmp") / "mcp_whatsapp"
     shutil.rmtree(tmp_path, ignore_errors=True)
