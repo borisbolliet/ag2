@@ -203,6 +203,7 @@ mcp-proxy-gen = [
     "fastapi>=0.112,<1",
     "requests",  # do not pin it
     "typer",
+    "stringcase==1.2.0",
 ]
 
 interop-crewai = [
