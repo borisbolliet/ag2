@@ -21,25 +21,24 @@ SUCCESFUL_IMPORT = result.is_successful
 __all__ = ["SUCCESFUL_IMPORT", "patch_get_parameter_type"]
 
 
-class ArgumentWithDescription("Argument"):  # type: ignore[misc]
-    description: Optional[str] = None
-
-    @cached_property
-    def argument(self) -> str:
-        if self.description:
-            description = self.description.replace('"""', '"""')
-            type_hint = f'Annotated[{self.type_hint}, """{description}"""]'
-        else:
-            type_hint = self.type_hint
-
-        if self.default is None and self.required:
-            return f"{self.name}: {type_hint}"
-
-        return f"{self.name}: {type_hint} = {self.default}"
-
-
 @contextmanager
 def patch_get_parameter_type() -> Iterator[None]:
+    class ArgumentWithDescription(Argument):  # type: ignore[misc]
+        description: Optional[str] = None
+
+        @cached_property
+        def argument(self) -> str:
+            if self.description:
+                description = self.description.replace('"""', '"""')
+                type_hint = f'Annotated[{self.type_hint}, """{description}"""]'
+            else:
+                type_hint = self.type_hint
+
+            if self.default is None and self.required:
+                return f"{self.name}: {type_hint}"
+
+            return f"{self.name}: {type_hint} = {self.default}"
+
     original_get_parameter_type = OpenAPIParser.get_parameter_type
 
     def get_parameter_type(
