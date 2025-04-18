@@ -73,7 +73,7 @@ def get_new_function_name(operation: Operation, taken_names: List[str]) -> str:
     proposed_name = None
 
     for event in response.events:
-        if event.type == "text" and event.content.sender_name == "helpful_agent":
+        if event.type == "text" and event.content.sender == "helpful_agent":
             proposed_name = event.content.content.strip()
         elif event.type == "input_request":
             reply = (
