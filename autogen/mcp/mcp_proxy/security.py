@@ -131,6 +131,11 @@ class UnsuportedSecurityStub(BaseSecurity):
         def get_security_class(self) -> type[BaseSecurity]:
             return UnsuportedSecurityStub
 
+        def dump(self) -> dict[str, Any]:
+            return {
+                "type": "unsupported",
+            }
+
 
 class APIKeyHeader(BaseSecurity):
     """API Key Header security class."""
@@ -141,7 +146,7 @@ class APIKeyHeader(BaseSecurity):
     class Parameters(BaseSecurityParameters):  # BaseSecurityParameters
         """API Key Header security parameters class."""
 
-        value: str
+        value: str = "API_KEY"
 
         def apply(
             self,
@@ -180,7 +185,7 @@ class APIKeyQuery(BaseSecurity):
     class Parameters(BaseSecurityParameters):  # BaseSecurityParameters
         """API Key Query security parameters class."""
 
-        value: str
+        value: str = "API_KEY"
 
         def apply(
             self,
@@ -212,7 +217,7 @@ class APIKeyCookie(BaseSecurity):
     class Parameters(BaseSecurityParameters):  # BaseSecurityParameters
         """API Key Cookie security parameters class."""
 
-        value: str
+        value: str = "API_KEY"
 
         def apply(
             self,
@@ -251,7 +256,7 @@ class HTTPBearer(BaseSecurity):
     class Parameters(BaseSecurityParameters):  # BaseSecurityParameters
         """HTTP Bearer security parameters class."""
 
-        value: str
+        value: str = "BEARER_TOKEN"
 
         def apply(
             self,
@@ -288,8 +293,8 @@ class HTTPBasic(BaseSecurity):
     class Parameters(BaseSecurityParameters):  # BaseSecurityParameters
         """HTTP Basic security parameters class."""
 
-        username: str
-        password: str
+        username: str = "USERNAME"
+        password: str = "PASSWORD"
 
         def apply(
             self,
@@ -336,10 +341,10 @@ class OAuth2PasswordBearer(BaseSecurity):
     class Parameters(BaseSecurityParameters):  # BaseSecurityParameters
         """OAuth2 Password Bearer security class."""
 
-        username: Optional[str] = None
-        password: Optional[str] = None
+        username: str = "USERNAME"
+        password: str = "PASSWORD"
         bearer_token: Optional[str] = None
-        token_url: Optional[str] = None
+        token_url: str = "TOKEN_URL"
 
         @model_validator(mode="before")
         def check_credentials(cls, values: dict[str, Any]) -> Any:  # noqa
