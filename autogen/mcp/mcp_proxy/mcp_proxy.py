@@ -23,10 +23,8 @@ from typing import (
     Union,
 )
 
-import fastapi
 import requests
 import yaml
-from datamodel_code_generator import DataModelType
 from pydantic import PydanticInvalidForJsonSchema
 from pydantic_core import PydanticUndefined
 
@@ -35,9 +33,12 @@ from autogen.import_utils import optional_import_block
 from .security import BaseSecurity, BaseSecurityParameters
 
 with optional_import_block() as result:
+    import fastapi
+    from datamodel_code_generator import DataModelType
     from fastapi_code_generator.__main__ import generate_code
     from jinja2 import Environment, FileSystemLoader
     from mcp.server.fastmcp import FastMCP
+
 
 if TYPE_CHECKING:
     from autogen.agentchat import ConversableAgent
