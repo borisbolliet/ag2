@@ -118,7 +118,7 @@ class MCPProxy:
 
         for func in self._registered_funcs:
             try:
-                self._mcp.tool()(func)  # type: ignore [no-untyped-call]
+                mcp.tool()(func)  # type: ignore [no-untyped-call]
             except PydanticInvalidForJsonSchema as e:
                 logger.warning("Could not register function %s: %s", func.__name__, e)
 
@@ -413,8 +413,8 @@ class MCPProxy:
         with open(output_file, "w") as f:
             f.write(rendered_config)
 
-    def load_configuration(self, config_file: Path) -> None:
-        with config_file.open("r") as f:
+    def load_configuration(self, config_file: str) -> None:
+        with Path(config_file).open("r") as f:
             config_data_str = f.read()
 
         self.load_configuration_from_string(config_data_str)
@@ -425,7 +425,6 @@ class MCPProxy:
         self._servers = [{"url": config_data["server"]["url"]}]
 
         # Load authentication
-        self._security = {}
         for auth in config_data.get("authentication", []):
             security = BaseSecurity.parse_security_parameters(auth)
             self.set_security_params(security)

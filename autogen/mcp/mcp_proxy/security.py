@@ -346,17 +346,17 @@ class OAuth2PasswordBearer(BaseSecurity):
         bearer_token: Optional[str] = None
         token_url: str = "TOKEN_URL"
 
-        @model_validator(mode="before")
-        def check_credentials(cls, values: dict[str, Any]) -> Any:  # noqa
-            username = values.get("username")
-            password = values.get("password")
-            bearer_token = values.get("bearer_token")
+        # @model_validator(mode="before")
+        # def check_credentials(cls, values: dict[str, Any]) -> Any:  # noqa
+        #     username = values.get("username")
+        #     password = values.get("password")
+        #     bearer_token = values.get("bearer_token")
 
-            if not bearer_token and (not username or not password):
-                # If bearer_token is not provided, both username and password must be defined
-                raise ValueError("Both username and password are required if bearer_token is not provided.")
+        #     if not bearer_token and (not username or not password):
+        #         # If bearer_token is not provided, both username and password must be defined
+        #         raise ValueError("Both username and password are required if bearer_token is not provided.")
 
-            return values
+        #     return values
 
         def get_token(self, token_url: str) -> str:
             # Get the token
@@ -394,5 +394,7 @@ class OAuth2PasswordBearer(BaseSecurity):
             return {
                 "type": "oauth2",
                 "schema_parameters": {"flows": {"password": {"tokenUrl": self.token_url or ""}}},
-                **self.model_dump(),
+                "username": self.username,
+                "password": self.password,
+                "bearer_token": self.bearer_token,
             }

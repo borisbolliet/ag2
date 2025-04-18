@@ -52,8 +52,6 @@ def get_new_function_name(operation: Operation, taken_names: List[str]) -> str:
     Returns:
         A new, validated function name.
     """
-    logger.warning(f"Renaming operation '{operation.function_name}' to a new name.")
-
     agent = ConversableAgent(
         name="helpful_agent",
         system_message=SYSTEM_MESSAGE,
