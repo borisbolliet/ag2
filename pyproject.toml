@@ -328,8 +328,6 @@ Tracker = "https://github.com/ag2ai/ag2/issues"
 Source = "https://github.com/ag2ai/ag2"
 Discord = "https://discord.gg/pAbnFJrkgZ"
 
-[project.scripts]
-mcp_proxy = "autogen.mcp.__main__:app"
 
 [tool.hatch.version]
 path = "autogen/version.py"
