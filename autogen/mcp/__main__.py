@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 import logging
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 import typer
 
@@ -37,9 +37,9 @@ def callback(
 
 @app.command()
 def create(
-    openapi_json: Annotated[
+    openapi_specification: Annotated[
         Optional[str],
-        "JSON specification of the OpenAPI to use for the proxy generation.",
+        "Specification of the OpenAPI to use for the proxy generation.",
     ] = None,
     openapi_url: Annotated[
         Optional[str],
@@ -53,13 +53,18 @@ def create(
         Optional[str],
         "Comma-separated list of server URLs to use for the proxy generation.",
     ] = None,
+    configuration_type: Annotated[
+        Literal["json", "yaml"],
+        "Configuration type of the specification. Can be 'json' or 'yaml'.",
+    ] = "json",
 ) -> None:
     """Generate mcp proxy for your AG2 projects."""
     MCPProxy.create(
-        openapi_json=openapi_json,
+        openapi_specification=openapi_specification,
         openapi_url=openapi_url,
         client_source_path=client_source_path,
         servers=[{"url": server_url}],
+        configuration_type=configuration_type,
     )
 
 

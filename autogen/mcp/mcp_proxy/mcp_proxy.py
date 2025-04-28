@@ -317,7 +317,7 @@ class MCPProxy:
     def create(
         cls,
         *,
-        openapi_json: Optional[str] = None,
+        openapi_specification: Optional[str] = None,
         openapi_url: Optional[str] = None,
         client_source_path: Optional[str] = None,
         servers: Optional[list[dict[str, Any]]] = None,
@@ -325,15 +325,17 @@ class MCPProxy:
         group_functions: bool = False,
         configuration_type: Literal["json", "yaml"] = "json",
     ) -> "MCPProxy":
-        if (openapi_json is None) == (openapi_url is None):
-            raise ValueError("Either openapi_json or openapi_url should be provided")
+        if (openapi_specification is None) == (openapi_url is None):
+            raise ValueError("Either openapi_specification or openapi_url should be provided")
 
-        if openapi_json is None and openapi_url is not None:
+        if openapi_specification is None and openapi_url is not None:
             with requests.get(openapi_url, timeout=10) as response:
                 response.raise_for_status()
-                openapi_json = response.text
+                openapi_specification = response.text
 
-        openapi_parsed = json.loads(openapi_json) if configuration_type == "json" else yaml.safe_load(openapi_json)  # type: ignore [arg-type]
+        openapi_parsed = (
+            json.loads(openapi_specification) if configuration_type == "json" else yaml.safe_load(openapi_specification)
+        )  # type: ignore [arg-type]
 
         if servers:
             openapi_parsed["servers"] = servers
