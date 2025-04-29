@@ -12,7 +12,7 @@ with optional_import_block() as result:
 
 
 def custom_visitor(parser: "OpenAPIParser", model_path: Path) -> dict[str, object]:
-    if "securitySchemes" not in parser.raw_obj["components"]:
+    if "components" not in parser.raw_obj or "securitySchemes" not in parser.raw_obj["components"]:
         return {}
     security_schemes = parser.raw_obj["components"]["securitySchemes"]
     server_url = parser.raw_obj["servers"][0]["url"]
