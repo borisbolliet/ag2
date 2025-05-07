@@ -3,6 +3,7 @@ import argparse
 import os
 from pathlib import Path
 from typing import List
+
 from mcp.server.fastmcp import FastMCP
 
 # Initialize the MCP server
@@ -10,6 +11,7 @@ mcp = FastMCP("FilesystemServer")
 
 # This will be defined in main
 CONTEXT_PATH = None
+
 
 @mcp.tool()
 def list_files(relative_path: str = "") -> List[str]:
@@ -23,6 +25,7 @@ def list_files(relative_path: str = "") -> List[str]:
         return [f"Not a directory: {relative_path}"]
     return os.listdir(path)
 
+
 @mcp.tool()
 def read_file(relative_path: str) -> str:
     """
@@ -34,6 +37,7 @@ def read_file(relative_path: str) -> str:
     if not path.exists() or not path.is_file():
         return f"Not a file: {relative_path}"
     return path.read_text()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MCP Filesystem Server")

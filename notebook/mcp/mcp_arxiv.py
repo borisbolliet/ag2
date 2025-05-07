@@ -1,8 +1,8 @@
 import argparse
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict, List
+
 import arxiv
-import os
 from mcp.server.fastmcp import FastMCP
 
 # Initialize the MCP server
@@ -15,11 +15,13 @@ args, unknown = parser.parse_known_args()
 STORAGE_PATH = Path(args.storage_path).resolve()
 STORAGE_PATH.mkdir(parents=True, exist_ok=True)
 
+
 @mcp.tool()
 def search_arxiv(query: str, max_results: int = 3) -> List[str]:
     """Search arXiv and return IDs of top papers."""
     results = arxiv.Search(query=query, max_results=max_results)
-    return [result.entry_id.split('/')[-1] for result in results.results()]
+    return [result.entry_id.split("/")[-1] for result in results.results()]
+
 
 @mcp.tool()
 def download_paper(arxiv_id: str) -> str:
@@ -33,10 +35,12 @@ def download_paper(arxiv_id: str) -> str:
     else:
         return f"Paper {arxiv_id} not found"
 
+
 @mcp.tool()
 def list_papers() -> List[str]:
     """List downloaded papers."""
     return [f.name for f in STORAGE_PATH.glob("*.pdf")]
+
 
 @mcp.tool()
 def get_paper_info(arxiv_id: str) -> Dict[str, str]:
@@ -47,6 +51,7 @@ def get_paper_info(arxiv_id: str) -> Dict[str, str]:
         return {"title": paper.title, "abstract": paper.summary}
     else:
         return {"error": f"Paper {arxiv_id} not found"}
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="arXiv MCP Server")
