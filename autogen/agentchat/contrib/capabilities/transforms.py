@@ -86,7 +86,6 @@ class MessageHistoryLimiter:
 
         if exclude_names:
             filtered = [msg for msg in messages if msg.get("name") not in exclude_names]
-            print(f"filtered: {filtered}")
         else:
             filtered = messages
 
